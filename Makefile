@@ -15,6 +15,7 @@ init:
 deps:
 	rm -rf build && mkdir -p ./build/$(GOPKG)
 	docker run --rm -v $(ROOT)/contracts:/sources -v $(ROOT)/build/:/output ethereum/solc:0.4.25 --overwrite --abi --bin -o /output /sources/$(CONTRACT).sol
+	$(GOPATH)/src/github.com/chislab/go-fiscobcos/build/bin/abigen --bin=./build/$(CONTRACT).bin --abi=./build/$(CONTRACT).abi --pkg=$(GOPKG) --out=./build/$(GOPKG)/$(CONTRACT).go
 
 bench:up
 	node $(ROOT)/packages/caliper-cli/caliper.js benchmark run -w  $(ROOT)/benchmark -c $(ROOT)/benchmark/$(CONTRACT)/config.yaml  -n $(ROOT)/benchmark/4nodes1group/fisco-bcos.json
@@ -26,5 +27,5 @@ down:
 	docker-compose -f benchmark/4nodes1group/docker-compose.yaml down
 
 go:deps
-	 go get github.com/chislab/go-fiscobcos && cd $(GOPATH)/src/github.com/chislab/go-fiscobcos && make all
+	 # go get github.com/chislab/go-fiscobcos && cd $(GOPATH)/src/github.com/chislab/go-fiscobcos && make all
 	 $(GOPATH)/src/github.com/chislab/go-fiscobcos/build/bin/abigen --bin=./build/$(CONTRACT).bin --abi=./build/$(CONTRACT).abi --pkg=$(GOPKG) --out=./build/$(GOPKG)/$(CONTRACT).go
