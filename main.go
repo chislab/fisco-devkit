@@ -24,13 +24,6 @@ var (
 	genesisKey, _ = crypto.HexToECDSA("526ccb243b5e279a3ce30c08e4d091a0eb2c3bb5a700946d4da47b28df8fe6d5")
 )
 
-type JsonPRCReq struct {
-	ID      uint64        `json:"id"`
-	JsonRpc string        `json:"jsonrpc"`
-	Method  string        `json:"method"`
-	Params  []interface{} `json:"params"`
-}
-
 func main() {
 	gethCli, err := ethclient.Dial(defaultNode)
 	if err != nil {
@@ -52,7 +45,7 @@ func rawDeploy(gethCli *ethclient.Client) *common.Address {
 	payLoad := append(contractBin, input...)
 	nonce := time.Now().Unix()
 	height, err := gethCli.BlockNumber(context.Background(), 1)
-	rawTx := types.NewContractCreation(uint64(nonce), height.Uint64() + 100, big.NewInt(0),
+	rawTx := types.NewContractCreation(uint64(nonce), height.Uint64()+100, big.NewInt(0),
 		4700000, big.NewInt(20000000000), payLoad, big.NewInt(1), big.NewInt(1), nil)
 	var signer = types.HomesteadSigner{}
 	signature, err := crypto.Sign(signer.Hash(rawTx).Bytes(), genesisKey)
