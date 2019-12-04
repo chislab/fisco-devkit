@@ -14,7 +14,7 @@ init:
 
 deps:
 	rm -rf build && mkdir -p ./build/$(GOPKG)
-	docker run --rm -v $(ROOT)/contracts:/sources -v $(ROOT)/build/:/output ethereum/solc:0.4.25 --overwrite --abi --bin -o /output /sources/$(CONTRACT).sol
+	docker run --rm -v $(ROOT)/contracts:/sources -v $(ROOT)/build/:/output ethereum/solc:0.5.13 --overwrite --abi --bin -o /output /sources/$(CONTRACT).sol
 	$(GOPATH)/src/github.com/chislab/go-fiscobcos/build/bin/abigen --bin=./build/$(CONTRACT).bin --abi=./build/$(CONTRACT).abi --pkg=$(GOPKG) --out=./build/$(GOPKG)/$(CONTRACT).go
 
 bench:up

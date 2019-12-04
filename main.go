@@ -2,7 +2,6 @@ package main
 
 import (
 	"./build/hello"
-
 	"fmt"
 
 	"context"
@@ -34,7 +33,8 @@ func main() {
 	height, err := gethCli.BlockNumber(context.Background(), 1)
 	fmt.Println("BlockNumber: ", height.String())
 	addr := rawDeploy(gethCli)
-	fmt.Println(addr.Hash().String())
+	testGetAndSet(gethCli, genesisAuth, *addr)
+	testGetAndSet(gethCli, genesisAuth, *addr)
 	testGetAndSet(gethCli, genesisAuth, *addr)
 }
 
@@ -44,26 +44,21 @@ func rawDeploy(gethCli *ethclient.Client) *common.Address {
 	input, _ := contractABI.Pack("")
 	payLoad := append(contractBin, input...)
 	nonce := time.Now().Unix()
+	//nonce := 10001
 	height, err := gethCli.BlockNumber(context.Background(), 1)
 	rawTx := types.NewContractCreation(uint64(nonce), height.Uint64()+100, big.NewInt(0),
-		4700000, big.NewInt(20000000000), payLoad, big.NewInt(1), big.NewInt(1), nil)
-	var signer = types.HomesteadSigner{}
-	signature, err := crypto.Sign(signer.Hash(rawTx).Bytes(), genesisKey)
-	if err != nil {
-		return nil
-	}
-	signed, err := rawTx.WithSignature(signer, signature)
-	if err != nil {
-		return nil
-	}
+		30000000, big.NewInt(30000000), payLoad, big.NewInt(1), big.NewInt(1), nil)
 
-	err = gethCli.SendTransaction(context.Background(), signed)
+	genesisAuth := bind.NewKeyedTransactor(genesisKey)
+	genesisAuth.GasLimit = 30000000
+	signedTx, err := genesisAuth.Signer(types.HomesteadSigner{}, genesisAuth.From, rawTx)
+	fmt.Println("txHash: ", signedTx.Hash().String())
+	err = gethCli.SendTransaction(context.Background(), signedTx)
 	if err != nil {
 		fmt.Println(err.Error())
 	}
-	fmt.Println("txHash: ", signed.Hash().String())
 
-	receipt, err := CheckTxStatus(signed.Hash().String(), gethCli)
+	receipt, err := CheckTxStatus(signedTx.Hash().String(), gethCli)
 	contractAddr := receipt.ContractAddress
 	return &contractAddr
 }
@@ -80,10 +75,11 @@ func testGetAndSet(gethCli *ethclient.Client, opts *bind.TransactOpts, address c
 	height, _ := gethCli.BlockNumber(context.Background(), 1)
 	opts.BlockLimit = big.NewInt(0).Add(height, big.NewInt(100))
 	fmt.Println("test Set() method")
-	_, err = deployedHello.Set(opts, time.Now().String())
+	tx, err := deployedHello.Set(opts, time.Now().String())
 	if err != nil {
 		return
 	}
+	fmt.Println("Set() txHash: ", tx.Hash().String())
 	time.Sleep(1 * time.Second)
 	fmt.Println("test Get() method again")
 	r, err = deployedHello.Get(&bind.CallOpts{GroupId: opts.GroupId, From: opts.From})
