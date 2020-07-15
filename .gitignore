@@ -1,10 +1,11 @@
 build
-report-*.html
+#bin
 .idea
 log
-node_modules
 .DS_Store
-contract.address
-contracts/*.address
 */data
 */log
+nodes
+keys_certs/
+vendor
+.vscode

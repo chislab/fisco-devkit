@@ -1,31 +1,36 @@
-.PHONY: init deps
+.PHONY: init deps up down clean
 
-CONTRACT = HelloWorld
-GOPKG = "hello"
 ROOT = $(PWD)
 
-init:
-	rm -rf benchreports && mkdir benchreports
-	rm -rf ./node_modules && npm install && npm run bootstrap
-	rm -rf ./node_modules/ethereumjs-tx && tar -xvf ethereumjs-tx.tar.gz && mv -f ethereumjs-tx ./node_modules/
-	rm -rf ./node_modules/web3-core-method/ && tar -xvf web3-core-method.tar.gz && mv -f web3-core-method ./node_modules/
-	rm -rf ./node_modules/web3-eth-abi/ && tar -xvf web3-eth-abi.tar.gz && mv -f web3-eth-abi ./node_modules/
-	rm -rf ./node_modules/web3-eth-contract/ && tar -xvf web3-eth-contract.tar.gz && mv -f web3-eth-contract ./node_modules/
+SOLC = solc:0.6.0
 
 deps:
-	rm -rf build && mkdir -p ./build/$(GOPKG)
-	docker run --rm -v $(ROOT)/contracts:/sources -v $(ROOT)/build/:/output ethereum/solc:0.5.13 --overwrite --abi --bin -o /output /sources/$(CONTRACT).sol
-	$(GOPATH)/src/github.com/chislab/go-fiscobcos/build/bin/abigen --bin=./build/$(CONTRACT).bin --abi=./build/$(CONTRACT).abi --pkg=$(GOPKG) --out=./build/$(GOPKG)/$(CONTRACT).go
+	rm -rf build
+	$(call compile,hello)
 
-bench:up
-	node $(ROOT)/packages/caliper-cli/caliper.js benchmark run -w  $(ROOT)/benchmark -c $(ROOT)/benchmark/$(CONTRACT)/config.yaml  -n $(ROOT)/benchmark/4nodes1group/fisco-bcos.json
-
-up:down
-	docker-compose -f benchmark/4nodes1group/docker-compose.yaml up -d; sleep 3s
+init:
+	rm -rf bin nodes build vendor && mkdir -p bin build/hello && cp hello.go build/hello/hello.go
+	go mod tidy && go mod vendor
+	git submodule update --init --recursive
+	rm -rf vendor/github.com/chislab/go-fiscobcos/crypto/secp256k1 && tar -xvf secp256k1.tar.gz
+	mv -f secp256k1 vendor/github.com/chislab/go-fiscobcos/crypto/
+	bash build_chain.sh -l "127.0.0.1:4" -i -p 30300,20200,8545
 
 down:
-	docker-compose -f benchmark/4nodes1group/docker-compose.yaml down
+	bash nodes/127.0.0.1/stop_all.sh
 
-go:deps
-	 # go get github.com/chislab/go-fiscobcos && cd $(GOPATH)/src/github.com/chislab/go-fiscobcos && make all
-	 $(GOPATH)/src/github.com/chislab/go-fiscobcos/build/bin/abigen --bin=./build/$(CONTRACT).bin --abi=./build/$(CONTRACT).abi --pkg=$(GOPKG) --out=./build/$(GOPKG)/$(CONTRACT).go
+up:
+	rm -rf keys_certs
+	bash nodes/127.0.0.1/start_all.sh
+
+clean:
+	rm -rf $(ROOT)/nodes/127.0.0.1/node0/data
+	rm -rf $(ROOT)/nodes/127.0.0.1/node1/data
+	rm -rf $(ROOT)/nodes/127.0.0.1/node2/data
+	rm -rf $(ROOT)/nodes/127.0.0.1/node3/data
+
+define compile
+	mkdir -p ./build/$(1)
+	docker run --rm -v $(ROOT)/contracts:/sources -v $(ROOT)/build/:/output ethereum/$(SOLC) --overwrite --abi --bin -o /output /sources/$(1).sol
+	$(ROOT)/bin/abigen --bin=./build/$(1).bin --abi=./build/$(1).abi --pkg=$(1) --out=./build/$(1)/$(1).go
+endef

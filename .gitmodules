@@ -1,0 +1,3 @@
+[submodule "contracts/openzeppelin"]
+	path = contracts/openzeppelin
+	url = https://github.com/chislab/openzeppelin-contracts.git
